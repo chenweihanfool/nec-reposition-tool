@@ -1,13 +1,20 @@
 """版本與更新來源設定。"""
 
 APP_TITLE = 'NEC地籍檔定位修正工具'
-APP_VERSION = '1.2.0'
+APP_VERSION = '1.3.0'
 
 GITHUB_OWNER = 'chenweihanfool'
 GITHUB_REPO = 'nec-reposition-tool'
 
 # 更新歷程（新版在前），供 GUI 點選版本號時顯示。
 CHANGELOG = [
+    {
+        'version': '1.3.0', 'date': '2026-08-24',
+        'notes': [
+            '輸出檔名改成跟著步驟 3 選的輸出資料夾名稱走（例如輸出資料夾叫 KC0001，底下就是'
+            'KC0001.COA/BNP/PAR/D14/D29/D20…），不再固定沿用未定位資料夾原本的名稱',
+        ],
+    },
     {
         'version': '1.2.0', 'date': '2026-08-24',
         'notes': [

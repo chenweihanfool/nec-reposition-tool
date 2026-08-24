@@ -128,12 +128,15 @@ def parse_par(path):
     return header, info
 
 
-def copy_unchanged(src_folder, dst_folder, base_name):
-    """把拓樸/局部繪圖座標檔（CTL/DIS/MAP/RCO/UPN）原樣複製——剛體轉換不改變它們。"""
+def copy_unchanged(src_folder, dst_folder, src_base, dst_base=None):
+    """把拓樸/局部繪圖座標檔（CTL/DIS/MAP/RCO/UPN）原樣複製——剛體轉換不改變它們。
+    dst_base 預設沿用 src_base；輸出檔名要跟輸出資料夾名稱一致時，呼叫端會傳入
+    不同的 dst_base（見 pipeline.py）。"""
+    dst_base = dst_base or src_base
     copied = []
     for ext in COPY_EXTS:
-        src = case_path(src_folder, base_name, ext)
+        src = case_path(src_folder, src_base, ext)
         if os.path.exists(src):
-            shutil.copy2(src, case_path(dst_folder, base_name, ext))
+            shutil.copy2(src, case_path(dst_folder, dst_base, ext))
             copied.append(ext)
     return copied

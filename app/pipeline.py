@@ -29,8 +29,10 @@ def run(unpositioned_folder, reference_folder, output_folder, target_parcel=None
     """
     src_prefix, src_base = nec_format.detect_case(unpositioned_folder)
     ref_prefix, ref_base = resurvey_format.detect_case(reference_folder)
+    out_base = os.path.basename(output_folder.rstrip('\\/')) or src_base
     log(f'未定位資料夾：{src_base}（NEC 原生格式）')
     log(f'參考資料夾：{ref_base}（重測系統格式）')
+    log(f'輸出檔名將採用輸出資料夾名稱：{out_base}')
 
     coa_header, coa_points = nec_format.parse_coa(nec_format.case_path(unpositioned_folder, src_base, 'COA'))
     bnp_header, bnp_points = nec_format.parse_bnp(nec_format.case_path(unpositioned_folder, src_base, 'BNP'))
@@ -83,20 +85,20 @@ def run(unpositioned_folder, reference_folder, output_folder, target_parcel=None
     new_coa_points = {pid: (*transform(y, x), flag) for pid, (y, x, flag) in coa_points.items()}
 
     os.makedirs(output_folder, exist_ok=True)
-    nec_format.write_coa(nec_format.case_path(output_folder, src_base, 'COA'), coa_header, new_coa_points)
+    nec_format.write_coa(nec_format.case_path(output_folder, out_base, 'COA'), coa_header, new_coa_points)
     log(f'已寫出套合後 COA：{len(new_coa_points)} 個界址點')
 
     shutil.copy2(nec_format.case_path(unpositioned_folder, src_base, 'BNP'),
-                 nec_format.case_path(output_folder, src_base, 'BNP'))
+                 nec_format.case_path(output_folder, out_base, 'BNP'))
     shutil.copy2(nec_format.case_path(unpositioned_folder, src_base, 'PAR'),
-                 nec_format.case_path(output_folder, src_base, 'PAR'))
-    copied = nec_format.copy_unchanged(unpositioned_folder, output_folder, src_base)
+                 nec_format.case_path(output_folder, out_base, 'PAR'))
+    copied = nec_format.copy_unchanged(unpositioned_folder, output_folder, src_base, out_base)
     log(f"已原樣複製：BNP, PAR, {', '.join(copied) if copied else '(無其餘檔案)'}")
 
-    n_rfp = _copy_dbf_subset(reference_folder, ref_base, output_folder, src_base, 'D14',
+    n_rfp = _copy_dbf_subset(reference_folder, ref_base, output_folder, out_base, 'D14',
                               keep=resurvey_format.is_ref_point_record)
-    n_rfl = _copy_dbf_subset(reference_folder, ref_base, output_folder, src_base, 'D29')
-    n_sup = _copy_dbf_subset(reference_folder, ref_base, output_folder, src_base, 'D20')
+    n_rfl = _copy_dbf_subset(reference_folder, ref_base, output_folder, out_base, 'D29')
+    n_sup = _copy_dbf_subset(reference_folder, ref_base, output_folder, out_base, 'D20')
     log(f'已寫出參考點 {n_rfp} 個（D14）、參考線 {n_rfl} 條（D29）、補點 {n_sup} 個（D20）'
         f'——沿用參考資料夾原本的 DBF 格式，地籍測量軟體可直接開啟')
 
