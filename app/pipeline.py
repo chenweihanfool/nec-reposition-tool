@@ -20,8 +20,11 @@ class PipelineError(Exception):
     pass
 
 
-def run(unpositioned_folder, reference_folder, output_folder, log=lambda m: None):
-    """執行完整轉換流程，回傳診斷資訊 dict。"""
+def run(unpositioned_folder, reference_folder, output_folder, target_parcel=None, log=lambda m: None):
+    """執行完整轉換流程，回傳診斷資訊 dict。
+    target_parcel: 選填，(母號,子號) tuple。指定時套合會加權，讓結果在該地號附近盡可能貼合
+    （代價是離該地號較遠處的整體精度可能變差），見 fit.fit_rigid_transform_targeted。
+    """
     src_prefix, src_base = nec_format.detect_case(unpositioned_folder)
     ref_prefix, ref_base = resurvey_format.detect_case(reference_folder)
     log(f'未定位資料夾：{src_base}（NEC 原生格式）')
@@ -48,7 +51,17 @@ def run(unpositioned_folder, reference_folder, output_folder, log=lambda m: None
             f'請確認兩個資料夾是否為同一測區、地號是否有重疊。'
         )
 
-    result = fit.fit_rigid_transform(pairs)
+    if target_parcel is not None:
+        try:
+            result = fit.fit_rigid_transform_targeted(pairs, bnp_points, coa_points, target_parcel)
+        except ValueError as e:
+            raise PipelineError(str(e))
+        log(
+            f"已指定地號 {target_parcel[0]}-{target_parcel[1]} 加權套合（控制點離該地號越近權重越高）："
+            f"該地號附近 RMSE {result['weighted_rmse'] * 100:.1f} cm（整體 RMSE {result['rmse'] * 100:.1f} cm）"
+        )
+    else:
+        result = fit.fit_rigid_transform(pairs)
     log(
         f"套合結果：旋轉角 {result['theta_deg']:.4f}°，RMSE {result['rmse'] * 100:.1f} cm，"
         f"最大殘差 {result['max_residual'] * 100:.1f} cm（{result['n_points']} 個控制點）"
@@ -57,8 +70,10 @@ def run(unpositioned_folder, reference_folder, output_folder, log=lambda m: None
     warnings = []
     if result['n_points'] < WARN_MIN_PAIRS:
         warnings.append(f"控制點只有 {result['n_points']} 個（建議 >= {WARN_MIN_PAIRS} 個），套合結果可信度較低，建議人工複核")
-    if result['rmse'] > WARN_MAX_RMSE:
-        warnings.append(f"套合 RMSE（{result['rmse']:.3f} m）超過建議門檻（{WARN_MAX_RMSE} m），建議人工複核比對結果再使用")
+    check_rmse = result['weighted_rmse'] if target_parcel is not None else result['rmse']
+    check_label = '指定地號附近加權 RMSE' if target_parcel is not None else '套合 RMSE'
+    if check_rmse > WARN_MAX_RMSE:
+        warnings.append(f"{check_label}（{check_rmse:.3f} m）超過建議門檻（{WARN_MAX_RMSE} m），建議人工複核比對結果再使用")
     for w in warnings:
         log(f'警告：{w}')
 

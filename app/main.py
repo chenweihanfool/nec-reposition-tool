@@ -30,6 +30,7 @@ class App(tk.Tk):
         self.ref_folder = None
         self.ref_base = None
         self.output_var = tk.StringVar()
+        self.target_var = tk.StringVar()
         self.status_var = tk.StringVar(value='請先選擇未定位資料夾與參考資料夾')
 
         self._log_queue = queue.Queue()
@@ -117,6 +118,18 @@ class App(tk.Tk):
         self.lbl_output = ttk.Label(row3, text='尚未選擇（預設：未定位資料夾同層，加上「_定位」）', foreground='#888')
         self.lbl_output.pack(side='left', padx=10)
 
+        step4 = ttk.LabelFrame(self, text='進階（選填）— 指定地號局部加權套合')
+        step4.pack(fill='x', **pad)
+        row4 = ttk.Frame(step4)
+        row4.pack(fill='x', padx=8, pady=6)
+        ttk.Label(row4, text='地號（母號-子號，例如 123-45）：').pack(side='left')
+        ttk.Entry(row4, textvariable=self.target_var, width=14).pack(side='left', padx=6)
+        ttk.Label(
+            row4,
+            text='留空＝一般套合（整體最準）；填寫則讓套合結果在此地號附近盡可能貼合，其餘範圍精度可能降低',
+            foreground='#888', wraplength=560, justify='left',
+        ).pack(side='left', padx=6)
+
         run_row = ttk.Frame(self)
         run_row.pack(fill='x', **pad)
         self.btn_run = ttk.Button(run_row, text='開始轉換', command=self.start_run, state='disabled')
@@ -190,7 +203,25 @@ class App(tk.Tk):
             pass
         self.after(100, self._poll_log_queue)
 
+    def _parse_target_parcel(self):
+        text = self.target_var.get().strip()
+        if not text:
+            return None
+        sep = '-' if '-' in text else ('.' if '.' in text else None)
+        if sep is None:
+            raise ValueError(f'地號格式錯誤：「{text}」，請用「母號-子號」格式（例如 123-45）')
+        main_s, _, sub_s = text.partition(sep)
+        try:
+            return (int(main_s.strip()), int(sub_s.strip()))
+        except ValueError:
+            raise ValueError(f'地號格式錯誤：「{text}」，請用「母號-子號」格式（例如 123-45），母號子號需為數字')
+
     def start_run(self):
+        try:
+            target_parcel = self._parse_target_parcel()
+        except ValueError as e:
+            messagebox.showerror('地號格式錯誤', str(e))
+            return
         output = self.output_var.get() or (self.src_folder.rstrip('\\/') + '_定位')
         if os.path.exists(output) and os.listdir(output):
             if not messagebox.askyesno(
@@ -200,11 +231,11 @@ class App(tk.Tk):
                 return
         self.btn_run.config(state='disabled')
         self.status_var.set('轉換中…')
-        threading.Thread(target=self._run_thread, args=(output,), daemon=True).start()
+        threading.Thread(target=self._run_thread, args=(output, target_parcel), daemon=True).start()
 
-    def _run_thread(self, output):
+    def _run_thread(self, output, target_parcel):
         try:
-            result = pipeline.run(self.src_folder, self.ref_folder, output, log=self.log)
+            result = pipeline.run(self.src_folder, self.ref_folder, output, target_parcel=target_parcel, log=self.log)
             self.after(0, lambda: self._on_run_done(result))
         except Exception as e:
             traceback.print_exc()
@@ -214,13 +245,22 @@ class App(tk.Tk):
         self.status_var.set('完成')
         self.btn_run.config(state='normal')
         fit_result = result['fit_result']
-        msg = (
-            f"轉換完成！輸出資料夾：\n{result['output_folder']}\n\n"
+        lines = [
+            f"轉換完成！輸出資料夾：\n{result['output_folder']}\n",
             f"界址點 {result['n_coa']} 個、參考點 {result['n_rfp']} 個、"
-            f"參考線 {result['n_rfl']} 條、補點 {result['n_sup']} 個\n"
-            f"套合 RMSE：{fit_result['rmse'] * 100:.1f} cm"
-            f"（{fit_result['n_points']} 個控制點）"
-        )
+            f"參考線 {result['n_rfl']} 條、補點 {result['n_sup']} 個",
+        ]
+        if fit_result.get('target_key'):
+            mk, sk = fit_result['target_key']
+            lines.append(
+                f"已針對地號 {mk}-{sk} 加權套合：該地號附近 RMSE {fit_result['weighted_rmse'] * 100:.1f} cm"
+                f"（整體 RMSE {fit_result['rmse'] * 100:.1f} cm，{fit_result['n_points']} 個控制點）"
+            )
+        else:
+            lines.append(
+                f"套合 RMSE：{fit_result['rmse'] * 100:.1f} cm（{fit_result['n_points']} 個控制點）"
+            )
+        msg = '\n'.join(lines)
         if result['warnings']:
             msg += '\n\n注意：\n' + '\n'.join(f'• {w}' for w in result['warnings'])
             messagebox.showwarning('轉換完成（請留意警告）', msg)
