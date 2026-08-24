@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# PyInstaller
+build/
+dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# 測試/暫存輸出
+test_output/
+
+# 真實地籍測量資料（客戶資料，絕不進版本控制/公開 repo）
+/KC0327/
+/KC2327/
+*_定位/
