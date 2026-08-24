@@ -1,13 +1,21 @@
 """版本與更新來源設定。"""
 
 APP_TITLE = 'NEC地籍檔定位修正工具'
-APP_VERSION = '1.0.0'
+APP_VERSION = '1.0.1'
 
 GITHUB_OWNER = 'chenweihanfool'
 GITHUB_REPO = 'nec-reposition-tool'
 
 # 更新歷程（新版在前），供 GUI 點選版本號時顯示。
 CHANGELOG = [
+    {
+        'version': '1.0.1', 'date': '2026-08-24',
+        'notes': [
+            '修正 GitHub Release 上傳 exe 時，檔名內中文字在 CI 環境編碼問題下被砍掉的問題'
+            '（v1.0.0 的 Release 資產顯示為「NEC.exe」）：exe 檔名改用英文'
+            '「NEC-Reposition-Tool.exe」，程式內顯示的中文標題不受影響',
+        ],
+    },
     {
         'version': '1.0.0', 'date': '2026-08-24',
         'notes': [

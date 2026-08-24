@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='NEC地籍檔定位修正工具',
+    name='NEC-Reposition-Tool',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
