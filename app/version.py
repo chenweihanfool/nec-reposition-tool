@@ -1,13 +1,21 @@
 """版本與更新來源設定。"""
 
 APP_TITLE = 'NEC地籍檔定位修正工具'
-APP_VERSION = '1.1.0'
+APP_VERSION = '1.2.0'
 
 GITHUB_OWNER = 'chenweihanfool'
 GITHUB_REPO = 'nec-reposition-tool'
 
 # 更新歷程（新版在前），供 GUI 點選版本號時顯示。
 CHANGELOG = [
+    {
+        'version': '1.2.0', 'date': '2026-08-24',
+        'notes': [
+            '修正參考點/參考線/補點輸出：改成直接複製參考資料夾原本的 .D14（篩選出參考點）/'
+            '.D29/.D20（DBF 格式），取代先前自己發明的 .RFP/.RFL/.SUP 純文字格式——'
+            '舊格式地籍測量軟體不認得、看不到內容，新格式可直接開啟',
+        ],
+    },
     {
         'version': '1.1.0', 'date': '2026-08-24',
         'notes': [

@@ -4,7 +4,7 @@
 但座標是獨立的局部座標系，不是真實位置），根據另一份「參考」資料夾（如 `KC2327`，重測系統
 DBF 格式，範圍雖小但座標已正確）算出套合轉換，把未定位資料夾的所有界址點拉到正確位置，
 並把參考資料夾裡已經正確定位的參考點／參考線／補點一併轉出，輸出成一個新的、格式與輸入的
-未定位資料夾相同（NEC 原生格式 + 新增的參考點/線/補點檔）的資料夾。
+未定位資料夾相同（NEC 原生格式 + 參考資料夾原本的 `.D14`/`.D29`/`.D20`）的資料夾。
 
 單機執行、免安裝，直接雙擊 `dist\NEC-Reposition-Tool.exe` 即可使用，不需要另外安裝 Python。
 
@@ -25,8 +25,9 @@ DBF 格式，範圍雖小但座標已正確）算出套合轉換，把未定位�
    - 把套合轉換套用到未定位資料夾「全部」界址點（`COA`），輸出新的 `COA`
    - `BNP`/`PAR`/`CTL`/`DIS`/`MAP`/`RCO`/`UPN` 原樣複製（剛體轉換不影響拓樸、面積，
      `CTL`/`MAP` 本來就是跟 `COA` 無關的局部繪圖座標系）
-   - 新增 `.RFP`（參考點）/`.RFL`（參考線）/`.SUP`（補點）三個檔案，直接採用參考資料夾裡
-     已經正確定位的座標，不套用轉換
+   - 從參考資料夾複製 `.D14`（篩選出參考點，`COT_REF != '0'` 那些）/`.D29`（參考線）/
+     `.D20`（補點）到輸出資料夾，維持原本的 DBF 格式與座標（不套用轉換、不轉成其他格式），
+     讓地籍測量軟體能直接開啟——不是額外發明新的副檔名
    - 完成後顯示套合品質（控制點數、RMSE、最大殘差），若品質偏低（控制點 < 6 個，或
      RMSE > 0.3 公尺）會跳出警告，提醒人工複核——地籍資料的可信度判斷應由使用者決定，
      程式不會強制中止
@@ -67,10 +68,10 @@ DBF 格式，範圍雖小但座標已正確）算出套合轉換，把未定位�
 - `.D14`（`COT_REF!=0`）＋`.D29`：參考點／參考線
 - `.D20`：補點（`CTL_NAME` 為點名文字，無地號歸屬）
 
-### 輸出：未定位資料夾同一套格式，另外新增
-- `.RFP` 參考點：`點號(母.子小數編碼)␣Y␣X`
-- `.RFL` 參考線：`TOP␣MID(可空白)␣BOT`，端點對應 `.RFP` 的點號或 `.SUP` 的點名
-- `.SUP` 補點：`點名␣Y␣X␣等級`
+### 輸出：未定位資料夾同一套格式，另外複製
+- `.D14`（僅 `COT_REF != '0'` 的參考點列）／`.D29`（參考線）／`.D20`（補點）：直接沿用
+  參考資料夾原本的 DBF 欄位結構與座標（見 [dbf_reader.py](app/dbf_reader.py) 的
+  `write_dbf`），不轉換、不轉成其他格式
 
 ## 原始碼／重新打包
 
@@ -85,8 +86,10 @@ python -m PyInstaller nec_reposition_tool.spec
 ## 核心模組
 
 - [nec_format.py](app/nec_format.py)：NEC 原生格式讀寫
-- [resurvey_format.py](app/resurvey_format.py)：重測系統 DBF 格式讀取（`dbf_reader.py` 移植自
-  [kc-survey-history-tool](https://github.com/chenweihanfool/kc-survey-history-tool)）
+- [resurvey_format.py](app/resurvey_format.py)：重測系統 DBF 格式讀取
+- [dbf_reader.py](app/dbf_reader.py)：dBase III 讀寫（讀取邏輯移植自
+  [kc-survey-history-tool](https://github.com/chenweihanfool/kc-survey-history-tool)；
+  寫入是本工具新增，用來把參考點/線/補點依原始欄位結構寫回輸出資料夾）
 - [fit.py](app/fit.py)：地號比對、邊長比對抓控制點、2D 剛體最小二乘套合（封閉解，已用合成資料
   數值驗證）
 - [pipeline.py](app/pipeline.py)：串接讀取/比對/套合/輸出全流程
